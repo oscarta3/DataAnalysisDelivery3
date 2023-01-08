@@ -8,6 +8,6 @@
           die('Could not Connect MySql Server:' .mysql_error());
         }
       if($conn){
-            echo('Success connecting to database! ');
+            echo('Success connecting to database! <br><br>');
         }
 ?>
