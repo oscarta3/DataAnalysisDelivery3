@@ -205,6 +205,8 @@ namespace Gamekit3D
             TimeoutToIdle();
 
             m_PreviouslyGrounded = m_IsGrounded;
+
+            //Debug.Log("pos: " + transform.position);
         }
 
         // Called at the start of FixedUpdate to record the current state of the base layer of the animator.
@@ -285,6 +287,7 @@ namespace Gamekit3D
                 // If jump is held, Ellen is ready to jump and not currently in the middle of a melee combo...
                 if (m_Input.JumpInput && m_ReadyToJump && !m_InCombo)
                 {
+                    Data("Jumping");
                     // ... then override the previously set vertical speed and make sure she cannot jump again.
                     m_VerticalSpeed = jumpSpeed;
                     m_IsGrounded = false;
@@ -632,12 +635,14 @@ namespace Gamekit3D
                     {
                         Damageable.DamageMessage damageData = (Damageable.DamageMessage)data;
                         Damaged(damageData);
+                        Data("Damaged");
                     }
                     break;
                 case MessageType.DEAD:
                     {
                         Damageable.DamageMessage damageData = (Damageable.DamageMessage)data;
                         Die(damageData);
+                        Data("Death");
                     }
                     break;
             }
@@ -678,5 +683,57 @@ namespace Gamekit3D
             m_Respawning = true;
             m_Damageable.isInvulnerable = true;
         }
+
+        void Data (string type)
+        {
+            Vector3Int intPos = new Vector3Int((int)transform.position.x, (int)transform.position.y, (int)transform.position.z);
+
+            if(type == "Damaged"){
+                onDamaged(intPos.x, intPos.y, intPos.z);
+            }
+            if(type == "Death"){
+                Debug.Log("Died on: " + intPos);
+            }
+            if(type == "Jumping"){
+                onJump(intPos.x, intPos.y, intPos.z);
+            }
+            if(type == "Position"){
+                Debug.Log("Pos: " + intPos);
+            }
+           
+        }
+
+        private void onDamaged(int x, int y, int z)
+        {
+            Debug.Log("Damaged on: " + x + " " + y + " " + z);
+            DamagedData newDamagedData = new DamagedData(x,y,z);
+
+            Debug.Log(newDamagedData.GetUrl());
+            StartCoroutine(SendToPHP(newDamagedData));
+        }
+
+        IEnumerator SendToPHP(DamagedData newDamagedData)
+        {
+            WWW www = new WWW(newDamagedData.GetUrl());
+            yield return www;
+            Debug.Log(www.text);
+        }
+
+        private void onJump(int x, int y, int z)
+        {
+            Debug.Log("Jumped on: " + x + " " + y + " " + z);
+            JumpData newJumpData = new JumpData(x,y,z);
+
+            Debug.Log(newJumpData.GetUrl());
+            StartCoroutine(SendToPHP(newJumpData));
+        }
+
+        IEnumerator SendToPHP(JumpData newJumpData)
+        {
+            WWW www = new WWW(newJumpData.GetUrl());
+            yield return www;
+            Debug.Log(www.text);
+        }
+
     }
 }
