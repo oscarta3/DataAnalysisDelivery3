@@ -149,6 +149,7 @@ namespace Gamekit3D
             meleeWeapon.SetOwner(gameObject);
 
             s_Instance = this;
+            StartCoroutine(SaveMove());
         }
 
         // Called automatically by Unity after Awake whenever the script is enabled. 
@@ -309,7 +310,7 @@ namespace Gamekit3D
                 {
                     m_VerticalSpeed = 0f;
                 }
-                
+
                 // If Ellen is airborne, apply gravity.
                 m_VerticalSpeed -= gravity * Time.deltaTime;
             }
@@ -321,13 +322,13 @@ namespace Gamekit3D
             // Create three variables, move input local to the player, flattened forward direction of the camera and a local target rotation.
             Vector2 moveInput = m_Input.MoveInput;
             Vector3 localMovementDirection = new Vector3(moveInput.x, 0f, moveInput.y).normalized;
-            
+
             Vector3 forward = Quaternion.Euler(0f, cameraSettings.Current.m_XAxis.Value, 0f) * Vector3.forward;
             forward.y = 0f;
             forward.Normalize();
 
             Quaternion targetRotation;
-            
+
             // If the local movement direction is the opposite of forward then the target rotation should be towards the camera.
             if (Mathf.Approximately(Vector3.Dot(localMovementDirection, Vector3.forward), -1.0f))
             {
@@ -382,7 +383,7 @@ namespace Gamekit3D
                 {
                     // The desired forward is the direction to the closest enemy.
                     resultingForward = closestForward;
-                    
+
                     // We also directly set the rotation, as we want snappy fight and orientation isn't updated in the UpdateOrientation function during an atatck.
                     transform.rotation = Quaternion.LookRotation(resultingForward);
                 }
@@ -507,7 +508,7 @@ namespace Gamekit3D
                 {
                     // ... and get the movement of the root motion rotated to lie along the plane of the ground.
                     movement = Vector3.ProjectOnPlane(m_Animator.deltaPosition, hit.normal);
-                    
+
                     // Also store the current walking surface so the correct audio is played.
                     Renderer groundRenderer = hit.collider.GetComponentInChildren<Renderer>();
                     m_CurrentWalkingSurface = groundRenderer ? groundRenderer.sharedMaterial : null;
@@ -546,7 +547,7 @@ namespace Gamekit3D
             // Send whether or not Ellen is on the ground to the animator.
             m_Animator.SetBool(m_HashGrounded, m_IsGrounded);
         }
-        
+
         // This is called by an animation event when Ellen swings her staff.
         public void MeleeAttackStart(int throwing = 0)
         {
@@ -573,7 +574,7 @@ namespace Gamekit3D
         {
             StartCoroutine(RespawnRoutine());
         }
-        
+
         protected IEnumerator RespawnRoutine()
         {
             // Wait for the animator to be transitioning from the EllenDeath state.
@@ -581,7 +582,7 @@ namespace Gamekit3D
             {
                 yield return null;
             }
-            
+
             // Wait for the screen to fade out.
             yield return StartCoroutine(ScreenFader.FadeSceneOut());
             while (ScreenFader.IsFading)
@@ -603,17 +604,17 @@ namespace Gamekit3D
             {
                 Debug.LogError("There is no Checkpoint set, there should always be a checkpoint set. Did you add a checkpoint at the spawn?");
             }
-            
+
             // Set the Respawn parameter of the animator.
             m_Animator.SetTrigger(m_HashRespawn);
-            
+
             // Start the respawn graphic effects.
             spawn.StartEffect();
-            
+
             // Wait for the screen to fade in.
             // Currently it is not important to yield here but should some changes occur that require waiting until a respawn has finished this will be required.
             yield return StartCoroutine(ScreenFader.FadeSceneIn());
-            
+
             m_Damageable.ResetDamage();
         }
 
@@ -621,7 +622,7 @@ namespace Gamekit3D
         public void RespawnFinished()
         {
             m_Respawning = false;
-            
+
             //we set the damageable invincible so we can't get hurt just after being respawned (feel like a double punitive)
             m_Damageable.isInvulnerable = false;
         }
@@ -684,31 +685,35 @@ namespace Gamekit3D
             m_Damageable.isInvulnerable = true;
         }
 
-        void Data (string type)
+        void Data(string type)
         {
             Vector3Int intPos = new Vector3Int((int)transform.position.x, (int)transform.position.y, (int)transform.position.z);
 
-            if(type == "Damaged"){
+            if (type == "Damaged")
+            {
                 onDamaged(intPos.x, intPos.y, intPos.z);
             }
-            if(type == "Death"){
+            if (type == "Death")
+            {
                 Debug.Log("Died on: " + intPos);
             }
-            if(type == "Jumping"){
+            if (type == "Jumping")
+            {
                 onJump(intPos.x, intPos.y, intPos.z);
             }
-            if(type == "Position"){
+            if (type == "Position")
+            {
                 Debug.Log("Pos: " + intPos);
             }
-           
+
         }
 
         private void onDamaged(int x, int y, int z)
         {
-            Debug.Log("Damaged on: " + x + " " + y + " " + z);
-            DamagedData newDamagedData = new DamagedData(x,y,z);
+            //Debug.Log("Damaged on: " + x + " " + y + " " + z);
+            DamagedData newDamagedData = new DamagedData(x, y, z);
 
-            Debug.Log(newDamagedData.GetUrl());
+            //Debug.Log(newDamagedData.GetUrl());
             StartCoroutine(SendToPHP(newDamagedData));
         }
 
@@ -716,15 +721,15 @@ namespace Gamekit3D
         {
             WWW www = new WWW(newDamagedData.GetUrl());
             yield return www;
-            Debug.Log(www.text);
+            //Debug.Log(www.text);
         }
 
         private void onJump(int x, int y, int z)
         {
-            Debug.Log("Jumped on: " + x + " " + y + " " + z);
-            JumpData newJumpData = new JumpData(x,y,z);
+            //Debug.Log("Jumped on: " + x + " " + y + " " + z);
+            JumpData newJumpData = new JumpData(x, y, z);
 
-            Debug.Log(newJumpData.GetUrl());
+            //Debug.Log(newJumpData.GetUrl());
             StartCoroutine(SendToPHP(newJumpData));
         }
 
@@ -735,6 +740,32 @@ namespace Gamekit3D
             Debug.Log(www.text);
         }
 
-        
+        protected IEnumerator SaveMove()
+        {
+            while (true)
+            {
+                Vector3Int intPos = new Vector3Int((int)transform.position.x, (int)transform.position.y, (int)transform.position.z);
+                onMovement(intPos.x, intPos.y, intPos.z);
+                yield return new WaitForSeconds(0.25f);
+            }
+        }
+
+
+
+        private void onMovement(int x, int y, int z)
+        {
+            //Debug.Log("Damaged on: " + x + " " + y + " " + z);
+            MoveData newMove = new MoveData(x, y, z);
+
+            //Debug.Log(newMove.GetUrl());
+            StartCoroutine(SendToPHP(newMove));
+        }
+
+        IEnumerator SendToPHP(MoveData newMove)
+        {
+            WWW www = new WWW(newMove.GetUrl());
+            yield return www;
+            //Debug.Log(www.text);
+        }
     }
 }
