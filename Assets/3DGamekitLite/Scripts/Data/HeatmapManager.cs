@@ -6,14 +6,8 @@ using UnityEngine;
 public class HeatmapManager : MonoBehaviour
 {
 
-    Vector3Int[] playerPositions = new Vector3Int[26];
-    int ykes;
-    Texture2D heatmapTexture;
-    public Gradient colorGradient;
-    float minValue = float.MaxValue;
-    float maxValue = float.MinValue;
-
-
+    List<Vector3Int> playerPositions = new List<Vector3Int>();
+    public GameObject cubePrefab;
 
     void Update()
     {
@@ -21,12 +15,10 @@ public class HeatmapManager : MonoBehaviour
         {
             StartCoroutine(GetJumpedData());
         }
-
         if (Input.GetKeyDown(KeyCode.H))
         {
-            PrepareHeatmap();
-        }
 
+        }
     }
 
     IEnumerator GetJumpedData()
@@ -48,54 +40,24 @@ public class HeatmapManager : MonoBehaviour
             Vector3Int vector = new Vector3Int(x, y, z);
             jumpDataInt[i - 2] = vector;
         }
-        
+
 
         for (int i = 0; i < jumpDataInt.Length; i++)
         {
-            playerPositions[i] = jumpDataInt[i];
+            playerPositions.Add(jumpDataInt[i]);
         }
-       
-    }
 
-    void PrepareHeatmap()
-    {
-        for (int i = 0; i < playerPositions.Length; i++)
+        for (int i = 0; i < playerPositions.Count; i++)
         {
-            minValue = Mathf.Min(minValue, playerPositions[i].magnitude);
-            maxValue = Mathf.Max(maxValue, playerPositions[i].magnitude);
+            // Creamos una instancia del cubo en la posición actual
+            GameObject cube = Instantiate(cubePrefab, playerPositions[i], Quaternion.identity);
+            cube.transform.localPosition = new Vector3(cube.transform.localPosition.x, 0.5f, cube.transform.localPosition.z);
+
+            // Le asignamos un color cyan
+            cube.GetComponent<Renderer>().material.color = Color.cyan;
         }
 
-        heatmapTexture = new Texture2D(512, 512);
-        GetComponent<Renderer>().material.mainTexture = heatmapTexture;
-        GenerateHeatmap();
-    }
+        
 
-    void GenerateHeatmap()
-    {
-        for (int x = 0; x < heatmapTexture.width; x++)
-        {
-            for (int y = 0; y < heatmapTexture.height; y++)
-            {
-                // Calculate the pixel's position in the world
-                Vector3 pixelPos = transform.position + new Vector3(x, y) * 0.1f;
-
-                // Calculate the heat value at this pixel based on the player positions
-                float heat = 0;
-                for (int i = 0; i < playerPositions.Length; i++)
-                {
-                    heat += (1 - Vector3.Distance(pixelPos, playerPositions[i]) / 10f);
-                }
-                heat = Mathf.Clamp01(heat);
-
-                // Map the heat value to a color using the color gradient
-                Color color = colorGradient.Evaluate(heat);
-
-                // Set the pixel's color on the texture
-                heatmapTexture.SetPixel(x, y, color);
-            }
-        }
-
-        // Apply the changes to the texture
-        heatmapTexture.Apply();
     }
 }
