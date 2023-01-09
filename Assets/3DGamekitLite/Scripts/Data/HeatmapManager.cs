@@ -6,8 +6,21 @@ using UnityEngine;
 public class HeatmapManager : MonoBehaviour
 {
 
-    List<Vector3Int> playerPositions = new List<Vector3Int>();
-    public GameObject cubePrefab;
+    public List<Vector3> playerPositions = new List<Vector3>();
+    public List<GameObject> allCubes;
+    public float searchRadius = 2.0f;
+    public GameObject heatmapPointPrefab;
+    public Gradient gradient;
+    Color colorInicio = Color.green;
+    Color colorFinal = Color.red;
+    public float max = 0;
+    CubeCollision _cube;
+
+    void Start()
+    {
+        StartCoroutine(GetJumpedData());
+
+    }
 
     void Update()
     {
@@ -17,7 +30,7 @@ public class HeatmapManager : MonoBehaviour
         }
         if (Input.GetKeyDown(KeyCode.H))
         {
-
+            GenerateHeatmap(playerPositions);
         }
     }
 
@@ -31,7 +44,6 @@ public class HeatmapManager : MonoBehaviour
 
         for (int i = 2; i < (jumpData.Length - 1); i++)
         {
-            //Debug.Log(jumpData[i]);
             string[] parts = jumpData[i].Split(" ");
             int x = int.Parse(parts[0]);
             int y = int.Parse(parts[1]);
@@ -46,18 +58,39 @@ public class HeatmapManager : MonoBehaviour
         {
             playerPositions.Add(jumpDataInt[i]);
         }
+    }
 
-        for (int i = 0; i < playerPositions.Count; i++)
+    void GenerateHeatmap(List<Vector3> positions)
+    {
+        foreach (Vector3 position in positions)
         {
-            // Creamos una instancia del cubo en la posición actual
-            GameObject cube = Instantiate(cubePrefab, playerPositions[i], Quaternion.identity);
-            cube.transform.localPosition = new Vector3(cube.transform.localPosition.x, 0.5f, cube.transform.localPosition.z);
+            GameObject heatmapPoint = Instantiate(heatmapPointPrefab, new Vector3(position.x, 0.5f, position.z), Quaternion.identity, transform);
+            allCubes.Add(heatmapPoint);
+        }
+    }
 
-            // Le asignamos un color cyan
-            cube.GetComponent<Renderer>().material.color = Color.cyan;
+    public void CompareCubes()
+    {
+        foreach (GameObject go in allCubes)
+        {
+            CubeCollision script = go.GetComponent<CubeCollision>();
+            if(script.numCubes > max)
+            {
+                max = script.numCubes;
+            }
         }
 
-        
+        ColorCubes();
+    }
 
+    public void ColorCubes()
+    {
+        foreach (GameObject go in allCubes)
+        {
+            CubeCollision script = go.GetComponent<CubeCollision>();
+            float percentage = (script.numCubes / max);
+            Color color = gradient.Evaluate(percentage);
+            script.GetComponent<Renderer>().material.color = color;
+        }
     }
 }
