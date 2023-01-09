@@ -8,16 +8,11 @@ using System;
 using UnityEditor;
 #endif
 
-[System.Serializable]
-public class MyClass
-{
-    public string name;
-    public int value;
-}
-
 public class HeatmapManager : MonoBehaviour
 {
-    
+
+    enum HeatmapType { None, Path, Jumped, Damaged }
+    [SerializeField] HeatmapType heatType;
 
     public List<Vector3> jumpPositionsList = new List<Vector3>();
     public List<Vector3> pathPositionsList = new List<Vector3>();
@@ -27,33 +22,10 @@ public class HeatmapManager : MonoBehaviour
     public Gradient gradient;
     Color colorInicio = Color.green;
     Color colorFinal = Color.red;
+    public float pathMax = 0;
+    public float jumpMax = 0;
     public float max = 0;
     CubeCollision _cube;
-
-    [HideInInspector]
-    public int arrayIdx = 0;
-
-    [HideInInspector]
-    public string[] MyArray = new string[]{"Path", "Jumped"};
-
-
-    void OnGUI()
-    {
-        // Display the dropdown menu
-        arrayIdx = EditorGUILayout.Popup(arrayIdx, MyArray);
-
-        // Call a function when the selection changes
-        if (GUI.changed)
-        {
-            OnSelectionChanged(arrayIdx);
-        }
-    }
-
-    void OnSelectionChanged(int index)
-    {
-        // Do something when the selection changes
-        Debug.Log("Selection changed to: " + MyArray[index]);
-    }
 
     void Start()
     {
@@ -63,26 +35,32 @@ public class HeatmapManager : MonoBehaviour
 
     void OptionSelected()
     {
-        
+        if (heatType == HeatmapType.Path)
+        {
+            DestroyCurrentHeatmap();
+            max = pathMax;
+            GenerateHeatmap(pathPositionsList);
+        }
+        if (heatType == HeatmapType.Jumped)
+        {
+            DestroyCurrentHeatmap();
+            max = jumpMax;
+            GenerateHeatmap(jumpPositionsList);
+        }
+        if (heatType == HeatmapType.Damaged)
+        {
+            DestroyCurrentHeatmap();
+        }
+        if (heatType == HeatmapType.None)
+        {
+            DestroyCurrentHeatmap();
+        }
+
     }
 
     void OnValidate()
     {
         OptionSelected();
-    }
-
-
-    void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.P))
-        {
-            GenerateHeatmap(pathPositionsList);
-        }
-        if (Input.GetKeyDown(KeyCode.J))
-        {
-            GenerateHeatmap(jumpPositionsList);
-        }
-
     }
 
     IEnumerator GetJumpedData()
@@ -146,15 +124,31 @@ public class HeatmapManager : MonoBehaviour
         }
     }
 
+    void DestroyCurrentHeatmap()
+    {
+        if (allCubes.Count > 0)
+        {
+            for (int i = 0; i < allCubes.Count; i++)
+            {
+                GameObject cube = allCubes[i];
+                Destroy(cube);
+            }
+            allCubes.Clear();
+        }
+    }
+
     public void CompareCubes()
     {
         foreach (GameObject go in allCubes)
         {
+
             CubeCollision script = go.GetComponent<CubeCollision>();
             if (script.numCubes > max)
             {
                 max = script.numCubes;
             }
+
+
         }
 
         ColorCubes();
@@ -173,7 +167,6 @@ public class HeatmapManager : MonoBehaviour
 }
 
 #if UNITY_EDITOR
-
 
 
 #endif
