@@ -26,6 +26,9 @@ public class HeatmapManager : MonoBehaviour
     public Gradient gradient;
     Color colorInicio = Color.green;
     Color colorFinal = Color.red;
+
+    int gridWidth = 129;
+    int gridHeight = 81;
     float pathMax = 0;
     float jumpMax = 0;
     float damagedMax = 0;
@@ -34,50 +37,102 @@ public class HeatmapManager : MonoBehaviour
     public float max = 0;
     CubeCollision _cube;
 
+    int[,] arrayName;
+
     void Start()
     {
+        arrayName = new int[gridWidth, gridHeight];
+
         StartCoroutine(GetJumpedData());
         StartCoroutine(GetPathData());
         StartCoroutine(GetDamagedData());
         StartCoroutine(GetDeathData());
         StartCoroutine(GetEnemiesKilledData());
+
+    }
+
+    void GenerateGrid(List<Vector3> list)
+    {
+        for (int i = 0; i < gridWidth; i++)
+        {
+            for (int j = 0; j < gridHeight; j++)
+            {
+                for (int k = 0; k < list.Count; k++)
+                {
+                    if (list[k].x >= i - 35 && list[k].x <= i - 31 && list[k].z >= j - 41 && list[k].z <= j - 37)
+                    {
+                        arrayName[i, j] += 1;
+                        if (arrayName[i, j] > max)
+                        {
+                            max += 1;
+                        }
+                    }
+
+                }
+                j += 3;
+            }
+            i += 3;
+        }
+
+        if (max == 0)
+        {
+            max = 1;
+        }
+
+        for (int i = 0; i < gridWidth; i++)
+        {
+            for (int j = 0; j < gridHeight; j++)
+            {
+                if (arrayName[i, j] != 0)
+                {
+                    GameObject heatmapPoint = Instantiate(heatmapPointPrefab, new Vector3(i - 33, 20, j - 39), Quaternion.identity, transform);
+                    float percentage = (arrayName[i,j] / max);
+                    Color color = gradient.Evaluate(percentage);
+                    heatmapPoint.GetComponent<Renderer>().material.color = color;
+                    allCubes.Add(heatmapPoint);
+                }
+            }
+        }
+
     }
 
     void OptionSelected()
     {
         if (heatType == HeatmapType.Path)
         {
-            DestroyCurrentHeatmap();
-            max = pathMax;
-            GenerateHeatmap(pathPositionsList);
+            GenerateGrid(pathPositionsList);
+            // EmptyGrid();
+            // max = pathMax;
+            // GenerateHeatmap(pathPositionsList);
         }
         if (heatType == HeatmapType.Jumped)
         {
-            DestroyCurrentHeatmap();
-            max = jumpMax;
-            GenerateHeatmap(jumpPositionsList);
+
+            EmptyGrid();
+            // max = jumpMax;
+            // GenerateHeatmap(jumpPositionsList);
         }
         if (heatType == HeatmapType.Damaged)
         {
-            DestroyCurrentHeatmap();
+            EmptyGrid();
             max = damagedMax;
             GenerateHeatmap(damagedPositionsList);
         }
         if (heatType == HeatmapType.Death)
         {
-            DestroyCurrentHeatmap();
+            EmptyGrid();
             max = deathMax;
             GenerateHeatmap(deathPositionsList);
         }
         if (heatType == HeatmapType.EnemiesKilled)
         {
-            DestroyCurrentHeatmap();
+            EmptyGrid();
             max = killedMax;
             GenerateHeatmap(enemiesKilledPositionsList);
         }
         if (heatType == HeatmapType.None)
         {
-            DestroyCurrentHeatmap();
+            EmptyGrid();
         }
 
     }
@@ -221,12 +276,12 @@ public class HeatmapManager : MonoBehaviour
     {
         foreach (Vector3 position in positions)
         {
-            GameObject heatmapPoint = Instantiate(heatmapPointPrefab, new Vector3(position.x, position.y, position.z), Quaternion.identity, transform);
+            GameObject heatmapPoint = Instantiate(heatmapPointPrefab, new Vector3(position.x, 20, position.z), Quaternion.identity, transform);
             allCubes.Add(heatmapPoint);
         }
     }
 
-    void DestroyCurrentHeatmap()
+    void EmptyGrid()
     {
         if (allCubes.Count > 0)
         {
@@ -250,7 +305,7 @@ public class HeatmapManager : MonoBehaviour
             }
         }
 
-        if(max == 0)
+        if (max == 0)
         {
             max = 1;
         }
