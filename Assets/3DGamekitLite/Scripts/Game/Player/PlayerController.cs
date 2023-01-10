@@ -769,11 +769,21 @@ namespace Gamekit3D
 
             //Debug.Log(newMove.GetUrl());
             StartCoroutine(SendToPHP(newMove));
+
+            PathData newPath = new PathData(x, y, z);
+            StartCoroutine(SendToPHP(newPath));
         }
 
         IEnumerator SendToPHP(MoveData newMove)
         {
             WWW www = new WWW(newMove.GetUrl());
+            yield return www;
+            //Debug.Log(www.text);
+        }
+
+        IEnumerator SendToPHP(PathData newPath)
+        {
+            WWW www = new WWW(newPath.GetUrl());
             yield return www;
             //Debug.Log(www.text);
         }

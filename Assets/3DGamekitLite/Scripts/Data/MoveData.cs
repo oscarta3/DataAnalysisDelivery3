@@ -8,7 +8,7 @@ public class MoveData : MonoBehaviour
     private int movedY;
     private int movedZ;
     private string baseUrl = "citmalumnes.upc.es/~oscarta3";
-    private string phpurl = "/path.php";
+    private string phpurl = "/position.php";
     private string url;
 
     public MoveData (int x, int y, int z)

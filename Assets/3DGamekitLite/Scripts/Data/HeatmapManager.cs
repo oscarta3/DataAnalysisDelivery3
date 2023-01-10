@@ -3,29 +3,26 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using System;
-//using UnityEngine.Networking;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
+using System.Threading;
 
 public class HeatmapManager : MonoBehaviour
 {
 
-    enum HeatmapType { None, Path, Jumped, Damaged, Death, EnemiesKilled }
+    enum HeatmapType { None, Position, Jumped, Damaged, Death, EnemiesKilled, Path, Grid }
     [SerializeField] HeatmapType heatType;
 
     List<Vector3> jumpPositionsList = new List<Vector3>();
-    List<Vector3> pathPositionsList = new List<Vector3>();
+    List<Vector3> positionList = new List<Vector3>();
     List<Vector3> damagedPositionsList = new List<Vector3>();
     List<Vector3> deathPositionsList = new List<Vector3>();
     List<Vector3> enemiesKilledPositionsList = new List<Vector3>();
+    List<Vector4> PathPositionsList = new List<Vector4>();
 
     public List<GameObject> allCubes;
-    public float searchRadius = 2.0f;
+    public List<float> colorPer;
     public GameObject heatmapPointPrefab;
     public Gradient gradient;
-    Color colorInicio = Color.green;
-    Color colorFinal = Color.red;
+    public Gradient _gradient = null;
 
     int gridWidth = 129;
     int gridHeight = 81;
@@ -35,7 +32,7 @@ public class HeatmapManager : MonoBehaviour
     float deathMax = 0;
     float killedMax = 0;
     public float max = 0;
-    CubeCollision _cube;
+    bool gradientdif = false;
 
     int[,] arrayName;
 
@@ -44,22 +41,54 @@ public class HeatmapManager : MonoBehaviour
         arrayName = new int[gridWidth, gridHeight];
 
         StartCoroutine(GetJumpedData());
-        StartCoroutine(GetPathData());
+        StartCoroutine(GetPositionData());
         StartCoroutine(GetDamagedData());
         StartCoroutine(GetDeathData());
         StartCoroutine(GetEnemiesKilledData());
+        StartCoroutine(GetPathData());
+
+
 
     }
 
-    void GenerateGrid(List<Vector3> list)
+    void Update()
+    {
+
+        if (gradientdif)
+        {
+            int i = 0;
+            foreach (GameObject instance in allCubes)
+            {
+                Color color = gradient.Evaluate(colorPer[i]);
+                instance.GetComponent<Renderer>().material.color = color;
+                i++;
+            }
+        }
+    }
+
+    void CreateGrid()
     {
         for (int i = 0; i < gridWidth; i++)
         {
             for (int j = 0; j < gridHeight; j++)
             {
+                GameObject gridCubes = Instantiate(heatmapPointPrefab, new Vector3(i - 33, 20, j - 39), Quaternion.identity, transform);
+                allCubes.Add(gridCubes);
+                j += 1;
+            }
+            i += 1;
+        }
+    }
+
+    void GenerateGrid(List<Vector3> list)
+    {
+        for (int i = 0; i < gridWidth; i += 2)
+        {
+            for (int j = 0; j < gridHeight; j += 2)
+            {
                 for (int k = 0; k < list.Count; k++)
                 {
-                    if (list[k].x >= i - 35 && list[k].x <= i - 31 && list[k].z >= j - 41 && list[k].z <= j - 37)
+                    if (list[k].x >= i - 34 && list[k].x <= i - 32 && list[k].z >= j - 40 && list[k].z <= j - 38)
                     {
                         arrayName[i, j] += 1;
                         if (arrayName[i, j] > max)
@@ -67,11 +96,8 @@ public class HeatmapManager : MonoBehaviour
                             max += 1;
                         }
                     }
-
                 }
-                j += 3;
             }
-            i += 3;
         }
 
         if (max == 0)
@@ -86,60 +112,149 @@ public class HeatmapManager : MonoBehaviour
                 if (arrayName[i, j] != 0)
                 {
                     GameObject heatmapPoint = Instantiate(heatmapPointPrefab, new Vector3(i - 33, 20, j - 39), Quaternion.identity, transform);
-                    float percentage = (arrayName[i,j] / max);
+                    float percentage = (arrayName[i, j] / max);
                     Color color = gradient.Evaluate(percentage);
                     heatmapPoint.GetComponent<Renderer>().material.color = color;
                     allCubes.Add(heatmapPoint);
+                    colorPer.Add(percentage);
                 }
             }
         }
 
     }
 
+    IEnumerator GeneratePath(List<Vector4> list)
+    {
+        for (int i = 0; i < gridWidth; i += 2)
+        {
+            for (int j = 0; j < gridHeight; j += 2)
+            {
+                for (int k = 0; k < list.Count; k++)
+                {
+                    if (list[k].x >= i - 34 && list[k].x <= i - 32 && list[k].z >= j - 40 && list[k].z <= j - 38)
+                    {
+
+                        int myInt = Convert.ToInt32(list[k].w);
+                        arrayName[i, j] = myInt;
+                        max = list[list.Count - 1].w;
+                    }
+                }
+            }
+        }
+
+
+        int count = 1;
+        while (count < max)
+        {
+            for (int i = 0; i < gridWidth; i++)
+            {
+                for (int j = 0; j < gridHeight; j++)
+                {
+
+                    if (arrayName[i, j] == count && arrayName[i, j] != 0)
+                    {
+                        yield return new WaitForSeconds(0.05f);
+                        GameObject heatmapPoint = Instantiate(heatmapPointPrefab, new Vector3(i - 33, 20, j - 39), Quaternion.identity, transform);
+                        float percentage = (arrayName[i, j] / list[list.Count - 1].w);
+                        Color color = gradient.Evaluate(percentage);
+                        heatmapPoint.GetComponent<Renderer>().material.color = color;
+                        allCubes.Add(heatmapPoint);
+                        colorPer.Add(percentage);
+                        
+                    }
+                }
+            }
+            count += 1;
+        }
+        StopCoroutine(GeneratePath(list));
+
+    }
+
+    void EmptyGrid()
+    {
+        
+        if (allCubes.Count > 0)
+        {
+            for (int i = 0; i < allCubes.Count; i++)
+            {
+                GameObject cube = allCubes[i];
+                Destroy(cube);
+                arrayName = new int[gridWidth, gridHeight];
+            }
+            allCubes.Clear();
+            colorPer.Clear();
+        }
+        max = 0;
+    }
+
     void OptionSelected()
     {
-        if (heatType == HeatmapType.Path)
+        if (heatType == HeatmapType.Position)
         {
-            GenerateGrid(pathPositionsList);
-            // EmptyGrid();
-            // max = pathMax;
-            // GenerateHeatmap(pathPositionsList);
+            EmptyGrid();
+            GenerateGrid(positionList);
         }
         if (heatType == HeatmapType.Jumped)
         {
-
             EmptyGrid();
-            // max = jumpMax;
-            // GenerateHeatmap(jumpPositionsList);
+            GenerateGrid(jumpPositionsList);
         }
         if (heatType == HeatmapType.Damaged)
         {
             EmptyGrid();
-            max = damagedMax;
-            GenerateHeatmap(damagedPositionsList);
+            GenerateGrid(damagedPositionsList);
         }
         if (heatType == HeatmapType.Death)
         {
             EmptyGrid();
-            max = deathMax;
-            GenerateHeatmap(deathPositionsList);
+            GenerateGrid(deathPositionsList);
         }
         if (heatType == HeatmapType.EnemiesKilled)
         {
             EmptyGrid();
-            max = killedMax;
-            GenerateHeatmap(enemiesKilledPositionsList);
+            GenerateGrid(enemiesKilledPositionsList);
+        }
+        if (heatType == HeatmapType.Path)
+        {
+            EmptyGrid();
+            StartCoroutine(GeneratePath(PathPositionsList));
         }
         if (heatType == HeatmapType.None)
         {
             EmptyGrid();
         }
+        if (heatType == HeatmapType.Grid)
+        {
+            EmptyGrid();
+            CreateGrid();
+        }
+        if (heatType != HeatmapType.Grid)
+        {
+            if (gradient != null)
+            {
+                for (int i = 0; i < gradient.colorKeys.Length; i++)
+                {
+                    if (gradient.colorKeys[i].color != _gradient.colorKeys[i].color || gradient.colorKeys[i].time != _gradient.colorKeys[i].time)
+                    {
+                        gradientdif = true;
+                        ChangeGradient();
+                    }
+                }
+            }
+        }
+
 
     }
 
     void OnValidate()
     {
         OptionSelected();
+    }
+
+    void ChangeGradient()
+    {
+        _gradient.SetKeys(gradient.colorKeys, gradient.alphaKeys);
+        gradientdif = false;
     }
 
     IEnumerator GetJumpedData()
@@ -168,29 +283,29 @@ public class HeatmapManager : MonoBehaviour
         }
     }
 
-    IEnumerator GetPathData()
+    IEnumerator GetPositionData()
     {
-        WWW www = new WWW("https://citmalumnes.upc.es/~oscarta3/importpath.php");
+        WWW www = new WWW("https://citmalumnes.upc.es/~oscarta3/importposition.php");
 
         yield return www;
-        string[] pathData = www.text.Split("<br>");
-        Vector3Int[] pathDataInt = new Vector3Int[pathData.Length - 3];
+        string[] PositionData = www.text.Split("<br>");
+        Vector3Int[] PositionDataInt = new Vector3Int[PositionData.Length - 3];
 
-        for (int i = 2; i < (pathData.Length - 1); i++)
+        for (int i = 2; i < (PositionData.Length - 1); i++)
         {
-            string[] parts = pathData[i].Split(" ");
+            string[] parts = PositionData[i].Split(" ");
             int x = int.Parse(parts[0]);
             int y = int.Parse(parts[1]);
             int z = int.Parse(parts[2]);
 
             Vector3Int vector = new Vector3Int(x, y, z);
-            pathDataInt[i - 2] = vector;
+            PositionDataInt[i - 2] = vector;
         }
 
 
-        for (int i = 0; i < pathDataInt.Length; i++)
+        for (int i = 0; i < PositionDataInt.Length; i++)
         {
-            pathPositionsList.Add(pathDataInt[i]);
+            positionList.Add(PositionDataInt[i]);
         }
     }
 
@@ -272,60 +387,30 @@ public class HeatmapManager : MonoBehaviour
         }
     }
 
-    void GenerateHeatmap(List<Vector3> positions)
+    IEnumerator GetPathData()
     {
-        foreach (Vector3 position in positions)
-        {
-            GameObject heatmapPoint = Instantiate(heatmapPointPrefab, new Vector3(position.x, 20, position.z), Quaternion.identity, transform);
-            allCubes.Add(heatmapPoint);
-        }
-    }
+        WWW www = new WWW("https://citmalumnes.upc.es/~oscarta3/importpath.php");
 
-    void EmptyGrid()
-    {
-        if (allCubes.Count > 0)
-        {
-            for (int i = 0; i < allCubes.Count; i++)
-            {
-                GameObject cube = allCubes[i];
-                Destroy(cube);
-            }
-            allCubes.Clear();
-        }
-    }
+        yield return www;
+        string[] pathData = www.text.Split("<br>");
+        Vector4[] pathDataInt = new Vector4[pathData.Length - 3];
 
-    public void CompareCubes()
-    {
-        foreach (GameObject go in allCubes)
+        for (int i = 2; i < (pathData.Length - 1); i++)
         {
-            CubeCollision script = go.GetComponent<CubeCollision>();
-            if (script.numCubes > max)
-            {
-                max = script.numCubes;
-            }
+            string[] parts = pathData[i].Split(" ");
+            int x = int.Parse(parts[0]);
+            int y = int.Parse(parts[1]);
+            int z = int.Parse(parts[2]);
+            int order = int.Parse(parts[3]);
+
+            Vector4 vector = new Vector4(x, y, z, order);
+            pathDataInt[i - 2] = vector;
         }
 
-        if (max == 0)
-        {
-            max = 1;
-        }
 
-        ColorCubes();
-    }
-
-    public void ColorCubes()
-    {
-        foreach (GameObject go in allCubes)
+        for (int i = 0; i < pathDataInt.Length; i++)
         {
-            CubeCollision script = go.GetComponent<CubeCollision>();
-            float percentage = (script.numCubes / max);
-            Color color = gradient.Evaluate(percentage);
-            script.GetComponent<Renderer>().material.color = color;
+            PathPositionsList.Add(pathDataInt[i]);
         }
     }
 }
-
-#if UNITY_EDITOR
-
-
-#endif

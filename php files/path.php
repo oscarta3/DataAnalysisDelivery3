@@ -10,13 +10,13 @@ if(true)
      $posZ = $_GET['posZ'];
 	 
 
-     $sql = "INSERT INTO Movement (posX,posY,posZ)
+     $sql = "INSERT INTO Test (posX,posY,posZ)
      VALUES ('$posX' ,'$posY','$posZ')";
      if (mysqli_query($conn, $sql)) {
         echo "New record has been added successfully! ";
 
         $last_id = $conn->insert_id;
-        echo "New movement record created successfully.";
+        echo "New movement record created successfully.".$last_id;
      } else {
         echo "Error: " . $sql . ":-" . mysqli_error($conn);
      }
