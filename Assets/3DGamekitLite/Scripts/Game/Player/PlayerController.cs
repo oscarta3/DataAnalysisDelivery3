@@ -572,6 +572,8 @@ namespace Gamekit3D
         // This is usually called by a state machine behaviour on the animator controller but can be called from anywhere.
         public void Respawn()
         {
+            Data("Death");
+            Debug.Log("xdddd");
             StartCoroutine(RespawnRoutine());
         }
 
@@ -643,7 +645,6 @@ namespace Gamekit3D
                     {
                         Damageable.DamageMessage damageData = (Damageable.DamageMessage)data;
                         Die(damageData);
-                        Data("Death");
                     }
                     break;
             }
@@ -695,17 +696,12 @@ namespace Gamekit3D
             }
             if (type == "Death")
             {
-                Debug.Log("Died on: " + intPos);
+                onDeath(intPos.x, intPos.y, intPos.z);
             }
             if (type == "Jumping")
             {
                 onJump(intPos.x, intPos.y, intPos.z);
             }
-            if (type == "Position")
-            {
-                Debug.Log("Pos: " + intPos);
-            }
-
         }
 
         private void onDamaged(int x, int y, int z)
@@ -740,6 +736,22 @@ namespace Gamekit3D
             Debug.Log(www.text);
         }
 
+        private void onDeath(int x, int y, int z)
+        {
+            //Debug.Log("Jumped on: " + x + " " + y + " " + z);
+            DeathData newDeathData = new DeathData(x, y, z);
+
+            //Debug.Log(newDeathData.GetUrl());
+            StartCoroutine(SendToPHP(newDeathData));
+        }
+
+        IEnumerator SendToPHP(DeathData newDeathData)
+        {
+            WWW www = new WWW(newDeathData.GetUrl());
+            yield return www;
+            Debug.Log(www.text);
+        }
+
         protected IEnumerator SaveMove()
         {
             while (true)
@@ -749,8 +761,6 @@ namespace Gamekit3D
                 yield return new WaitForSeconds(0.25f);
             }
         }
-
-
 
         private void onMovement(int x, int y, int z)
         {

@@ -11,19 +11,26 @@ using UnityEditor;
 public class HeatmapManager : MonoBehaviour
 {
 
-    enum HeatmapType { None, Path, Jumped, Damaged }
+    enum HeatmapType { None, Path, Jumped, Damaged, Death, EnemiesKilled }
     [SerializeField] HeatmapType heatType;
 
-    public List<Vector3> jumpPositionsList = new List<Vector3>();
-    public List<Vector3> pathPositionsList = new List<Vector3>();
+    List<Vector3> jumpPositionsList = new List<Vector3>();
+    List<Vector3> pathPositionsList = new List<Vector3>();
+    List<Vector3> damagedPositionsList = new List<Vector3>();
+    List<Vector3> deathPositionsList = new List<Vector3>();
+    List<Vector3> enemiesKilledPositionsList = new List<Vector3>();
+
     public List<GameObject> allCubes;
     public float searchRadius = 2.0f;
     public GameObject heatmapPointPrefab;
     public Gradient gradient;
     Color colorInicio = Color.green;
     Color colorFinal = Color.red;
-    public float pathMax = 0;
-    public float jumpMax = 0;
+    float pathMax = 0;
+    float jumpMax = 0;
+    float damagedMax = 0;
+    float deathMax = 0;
+    float killedMax = 0;
     public float max = 0;
     CubeCollision _cube;
 
@@ -31,6 +38,9 @@ public class HeatmapManager : MonoBehaviour
     {
         StartCoroutine(GetJumpedData());
         StartCoroutine(GetPathData());
+        StartCoroutine(GetDamagedData());
+        StartCoroutine(GetDeathData());
+        StartCoroutine(GetEnemiesKilledData());
     }
 
     void OptionSelected()
@@ -50,6 +60,20 @@ public class HeatmapManager : MonoBehaviour
         if (heatType == HeatmapType.Damaged)
         {
             DestroyCurrentHeatmap();
+            max = damagedMax;
+            GenerateHeatmap(damagedPositionsList);
+        }
+        if (heatType == HeatmapType.Death)
+        {
+            DestroyCurrentHeatmap();
+            max = deathMax;
+            GenerateHeatmap(deathPositionsList);
+        }
+        if (heatType == HeatmapType.EnemiesKilled)
+        {
+            DestroyCurrentHeatmap();
+            max = killedMax;
+            GenerateHeatmap(enemiesKilledPositionsList);
         }
         if (heatType == HeatmapType.None)
         {
@@ -115,6 +139,84 @@ public class HeatmapManager : MonoBehaviour
         }
     }
 
+    IEnumerator GetDamagedData()
+    {
+        WWW www = new WWW("https://citmalumnes.upc.es/~oscarta3/importdamaged.php");
+
+        yield return www;
+        string[] damagedData = www.text.Split("<br>");
+        Vector3Int[] damagedDataInt = new Vector3Int[damagedData.Length - 3];
+
+        for (int i = 2; i < (damagedData.Length - 1); i++)
+        {
+            string[] parts = damagedData[i].Split(" ");
+            int x = int.Parse(parts[0]);
+            int y = int.Parse(parts[1]);
+            int z = int.Parse(parts[2]);
+
+            Vector3Int vector = new Vector3Int(x, y, z);
+            damagedDataInt[i - 2] = vector;
+        }
+
+
+        for (int i = 0; i < damagedDataInt.Length; i++)
+        {
+            damagedPositionsList.Add(damagedDataInt[i]);
+        }
+    }
+
+    IEnumerator GetDeathData()
+    {
+        WWW www = new WWW("https://citmalumnes.upc.es/~oscarta3/importdeath.php");
+
+        yield return www;
+        string[] deathData = www.text.Split("<br>");
+        Vector3Int[] deathDataInt = new Vector3Int[deathData.Length - 3];
+
+        for (int i = 2; i < (deathData.Length - 1); i++)
+        {
+            string[] parts = deathData[i].Split(" ");
+            int x = int.Parse(parts[0]);
+            int y = int.Parse(parts[1]);
+            int z = int.Parse(parts[2]);
+
+            Vector3Int vector = new Vector3Int(x, y, z);
+            deathDataInt[i - 2] = vector;
+        }
+
+
+        for (int i = 0; i < deathDataInt.Length; i++)
+        {
+            deathPositionsList.Add(deathDataInt[i]);
+        }
+    }
+
+    IEnumerator GetEnemiesKilledData()
+    {
+        WWW www = new WWW("https://citmalumnes.upc.es/~oscarta3/importenkilled.php");
+
+        yield return www;
+        string[] enemiesKilledData = www.text.Split("<br>");
+        Vector3Int[] enemiesKilledDataInt = new Vector3Int[enemiesKilledData.Length - 3];
+
+        for (int i = 2; i < (enemiesKilledData.Length - 1); i++)
+        {
+            string[] parts = enemiesKilledData[i].Split(" ");
+            int x = int.Parse(parts[0]);
+            int y = int.Parse(parts[1]);
+            int z = int.Parse(parts[2]);
+
+            Vector3Int vector = new Vector3Int(x, y, z);
+            enemiesKilledDataInt[i - 2] = vector;
+        }
+
+
+        for (int i = 0; i < enemiesKilledDataInt.Length; i++)
+        {
+            enemiesKilledPositionsList.Add(enemiesKilledDataInt[i]);
+        }
+    }
+
     void GenerateHeatmap(List<Vector3> positions)
     {
         foreach (Vector3 position in positions)
@@ -141,14 +243,16 @@ public class HeatmapManager : MonoBehaviour
     {
         foreach (GameObject go in allCubes)
         {
-
             CubeCollision script = go.GetComponent<CubeCollision>();
             if (script.numCubes > max)
             {
                 max = script.numCubes;
             }
+        }
 
-
+        if(max == 0)
+        {
+            max = 1;
         }
 
         ColorCubes();
