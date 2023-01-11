@@ -11,9 +11,11 @@ public class HeatmapManager : MonoBehaviour
     enum HeatmapType { None, Position, Jumped, Damaged, Death, EnemiesKilled, Path, Paths, Grid }
     [SerializeField] HeatmapType heatType;
 
+    enum HeatmapPosition { Static, Game }
+    [SerializeField] HeatmapPosition heatPosition;
 
-    //[SerializeField] 
-    //PathNumber pathNum;
+    enum CameraType { Ortographic, Perspective }
+    [SerializeField] CameraType camType;
 
     List<Vector3> jumpPositionsList = new List<Vector3>();
     List<Vector3> positionList = new List<Vector3>();
@@ -21,12 +23,15 @@ public class HeatmapManager : MonoBehaviour
     List<Vector3> deathPositionsList = new List<Vector3>();
     List<Vector3> enemiesKilledPositionsList = new List<Vector3>();
     List<Vector4> PathPositionsList = new List<Vector4>();
+    List<Vector3> currentList = new List<Vector3>();
 
     public List<GameObject> allCubes;
     public List<float> colorPer;
     public GameObject heatmapPointPrefab;
     public Gradient gradient;
     public Gradient _gradient = null;
+
+    CameraController _controller;
 
     int gridWidth = 129;
     int gridHeight = 81;
@@ -38,15 +43,33 @@ public class HeatmapManager : MonoBehaviour
     float killedMax = 0;
     public float max = 0;
     bool gradientdif = false;
+    bool heatPositionBool = false;
 
     private Coroutine coroutine;
 
 
     int[,] arrayName;
+    int[,] arrayPosition;
+
+    public GameObject ortographicCam;
+    public GameObject perspectiveCam;
+
+    public void CameraOne()
+    {
+        ortographicCam.SetActive(true);
+        perspectiveCam.SetActive(false);
+    }
+
+    public void CameraTwo()
+    {
+        perspectiveCam.SetActive(true);
+        ortographicCam.SetActive(false);
+    }
 
     void Start()
     {
         arrayName = new int[gridWidth, gridHeight];
+        arrayPosition = new int[gridWidth, gridHeight];
 
         StartCoroutine(GetJumpedData());
         StartCoroutine(GetPositionData());
@@ -86,8 +109,9 @@ public class HeatmapManager : MonoBehaviour
         }
     }
 
-    void GenerateGrid(List<Vector3> list)
+    void GenerateGrid(List<Vector3> list, bool yikers)
     {
+
         for (int i = 0; i < gridWidth; i += 2)
         {
             for (int j = 0; j < gridHeight; j += 2)
@@ -97,6 +121,7 @@ public class HeatmapManager : MonoBehaviour
                     if (list[k].x >= i - 34 && list[k].x <= i - 32 && list[k].z >= j - 40 && list[k].z <= j - 38)
                     {
                         arrayName[i, j] += 1;
+                        arrayPosition[i, j] = (int)list[k].y;
                         if (arrayName[i, j] > max)
                         {
                             max += 1;
@@ -117,19 +142,31 @@ public class HeatmapManager : MonoBehaviour
             {
                 if (arrayName[i, j] != 0)
                 {
-                    GameObject heatmapPoint = Instantiate(heatmapPointPrefab, new Vector3(i - 33, 20, j - 39), Quaternion.identity, transform);
-                    float percentage = (arrayName[i, j] / max);
-                    Color color = gradient.Evaluate(percentage);
-                    heatmapPoint.GetComponent<Renderer>().material.color = color;
-                    allCubes.Add(heatmapPoint);
-                    colorPer.Add(percentage);
+                    if (!yikers)
+                    {
+                        GameObject heatmapPoint = Instantiate(heatmapPointPrefab, new Vector3(i - 33, 20, j - 39), Quaternion.identity, transform);
+                        float percentage = (arrayName[i, j] / max);
+                        Color color = gradient.Evaluate(percentage);
+                        heatmapPoint.GetComponent<Renderer>().material.color = color;
+                        allCubes.Add(heatmapPoint);
+                        colorPer.Add(percentage);
+                    }
+                    else
+                    {
+                        GameObject heatmapPoint = Instantiate(heatmapPointPrefab, new Vector3(i - 33, arrayPosition[i, j], j - 39), Quaternion.identity, transform);
+                        float percentage = (arrayName[i, j] / max);
+                        Color color = gradient.Evaluate(percentage);
+                        heatmapPoint.GetComponent<Renderer>().material.color = color;
+                        allCubes.Add(heatmapPoint);
+                        colorPer.Add(percentage);
+                    }
                 }
             }
         }
 
-    }
 
-    IEnumerator GeneratePath(List<Vector4> list)
+    }
+    IEnumerator GeneratePath(List<Vector4> list, bool yikers)
     {
 
         List<Vector4> list2 = new List<Vector4>();
@@ -144,8 +181,17 @@ public class HeatmapManager : MonoBehaviour
                     {
                         if (list[p].x >= i - 34 && list[p].x <= i - 32 && list[p].z >= j - 40 && list[p].z <= j - 38)
                         {
-                            Vector4 Test = new Vector4(i, 20, j, list[p].w);
-                            list2.Add(Test);
+                            if (yikers)
+                            {
+                                Vector4 Test = new Vector4(i, list[p].y, j, list[p].w);
+                                list2.Add(Test);
+                            }
+                            else
+                            {
+                                Vector4 Test = new Vector4(i, 20, j, list[p].w);
+                                list2.Add(Test);
+                            }
+
                         }
                     }
                 }
@@ -154,7 +200,7 @@ public class HeatmapManager : MonoBehaviour
         for (int i = 0; i < list2.Count; i++)
         {
             yield return new WaitForSeconds(0.03f);
-            GameObject heatmapPoint = Instantiate(heatmapPointPrefab, new Vector3(list2[i].x - 33, 20 + i * 0.001f, list2[i].z - 39), Quaternion.identity, transform);
+            GameObject heatmapPoint = Instantiate(heatmapPointPrefab, new Vector3(list2[i].x - 33, list2[i].y + i * 0.001f, list2[i].z - 39), Quaternion.identity, transform);
             float percentage = (list2[i].w / list2[list2.Count - 1].w);
             Color color = gradient.Evaluate(percentage);
             heatmapPoint.GetComponent<Renderer>().material.color = color;
@@ -163,7 +209,7 @@ public class HeatmapManager : MonoBehaviour
         }
 
 
-        StopCoroutine(GeneratePath(list));
+        StopCoroutine(GeneratePath(list, yikers));
 
     }
 
@@ -193,36 +239,44 @@ public class HeatmapManager : MonoBehaviour
         if (heatType == HeatmapType.Position)
         {
             EmptyGrid();
-            GenerateGrid(positionList);
+            GenerateGrid(positionList, heatPositionBool);
+            currentList = positionList;
         }
         if (heatType == HeatmapType.Jumped)
         {
             EmptyGrid();
-            GenerateGrid(jumpPositionsList);
+            GenerateGrid(jumpPositionsList, heatPositionBool);
+            currentList = jumpPositionsList;
         }
         if (heatType == HeatmapType.Damaged)
         {
             EmptyGrid();
-            GenerateGrid(damagedPositionsList);
+            GenerateGrid(damagedPositionsList, heatPositionBool);
+            currentList = damagedPositionsList;
         }
         if (heatType == HeatmapType.Death)
         {
             EmptyGrid();
-            GenerateGrid(deathPositionsList);
+            GenerateGrid(deathPositionsList, heatPositionBool);
+            currentList = deathPositionsList;
         }
         if (heatType == HeatmapType.EnemiesKilled)
         {
             EmptyGrid();
-            GenerateGrid(enemiesKilledPositionsList);
+            GenerateGrid(enemiesKilledPositionsList, heatPositionBool);
+            currentList = enemiesKilledPositionsList;
         }
         if (heatType == HeatmapType.Path)
         {
             EmptyGrid();
-            coroutine = StartCoroutine(GeneratePath(PathPositionsList));
+            currentList = new List<Vector3>();
+            coroutine = StartCoroutine(GeneratePath(PathPositionsList, heatPositionBool));
         }
         if (heatType == HeatmapType.None)
         {
+            //currentList.Clear();
             EmptyGrid();
+            currentList = new List<Vector3>();
         }
         if (heatType == HeatmapType.Grid)
         {
@@ -243,8 +297,42 @@ public class HeatmapManager : MonoBehaviour
                 }
             }
         }
-
-
+        if (heatPosition == HeatmapPosition.Static)
+        {
+            heatPositionBool = false;
+            EmptyGrid();
+            if(heatType != HeatmapType.Path)
+            {
+                GenerateGrid(currentList, heatPositionBool);
+            }
+            else
+            {
+                coroutine = StartCoroutine(GeneratePath(PathPositionsList, heatPositionBool));
+            }
+            
+        }
+        if (heatPosition == HeatmapPosition.Game)
+        {
+            heatPositionBool = true;
+            EmptyGrid();
+            if(heatType != HeatmapType.Path)
+            {
+                GenerateGrid(currentList, heatPositionBool);
+            }
+            else
+            {
+                coroutine = StartCoroutine(GeneratePath(PathPositionsList, heatPositionBool));
+            }
+        }
+        
+        if (camType == CameraType.Ortographic)
+        {
+            CameraOne();
+        }
+        if (camType == CameraType.Perspective)
+        {
+            CameraTwo();
+        }
     }
 
     void OnValidate()
