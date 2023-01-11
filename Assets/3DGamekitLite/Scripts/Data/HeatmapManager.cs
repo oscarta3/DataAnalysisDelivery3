@@ -7,7 +7,6 @@ using System.Threading;
 
 public class HeatmapManager : MonoBehaviour
 {
-
     enum HeatmapType { None, Position, Jumped, Damaged, Death, EnemiesKilled, Path }
     [SerializeField] HeatmapType heatType;
 
@@ -17,6 +16,8 @@ public class HeatmapManager : MonoBehaviour
     enum CameraType { Ortographic, Perspective }
     [SerializeField] CameraType camType;
 
+    public bool MapRender = true;
+
     List<Vector3> jumpPositionsList = new List<Vector3>();
     List<Vector3> positionList = new List<Vector3>();
     List<Vector3> damagedPositionsList = new List<Vector3>();
@@ -25,9 +26,6 @@ public class HeatmapManager : MonoBehaviour
     List<Vector4> PathPositionsList = new List<Vector4>();
     List<Vector3> currentList = new List<Vector3>();
 
-    public List<GameObject> allCubes;
-    public List<float> colorPer;
-    public GameObject heatmapPointPrefab;
     public Gradient gradient;
     public Gradient _gradient = null;
 
@@ -41,18 +39,23 @@ public class HeatmapManager : MonoBehaviour
     float damagedMax = 0;
     float deathMax = 0;
     float killedMax = 0;
-    public float max = 0;
+
     bool gradientdif = false;
     bool heatPositionBool = false;
 
     private Coroutine coroutine;
 
+    public List<GameObject> allCubes;
+    public List<float> colorPer;
+    public GameObject heatmapPointPrefab;
 
     int[,] arrayName = new int[129, 81];
     int[,] arrayPosition = new int[129, 81];
 
+    public GameObject map;
     public GameObject ortographicCam;
     public GameObject perspectiveCam;
+    public float max = 0;
 
     public void CameraOne()
     {
@@ -91,6 +94,15 @@ public class HeatmapManager : MonoBehaviour
                 instance.GetComponent<Renderer>().material.color = color;
                 i++;
             }
+        }
+
+        if(MapRender)
+        {
+            map.gameObject.SetActive(true);
+        }
+        else
+        {
+            map.gameObject.SetActive(false);
         }
     }
 
