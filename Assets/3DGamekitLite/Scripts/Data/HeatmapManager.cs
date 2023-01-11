@@ -8,7 +8,7 @@ using System.Threading;
 public class HeatmapManager : MonoBehaviour
 {
 
-    enum HeatmapType { None, Position, Jumped, Damaged, Death, EnemiesKilled, Path, Paths, Grid }
+    enum HeatmapType { None, Position, Jumped, Damaged, Death, EnemiesKilled, Path }
     [SerializeField] HeatmapType heatType;
 
     enum HeatmapPosition { Static, Game }
@@ -48,8 +48,8 @@ public class HeatmapManager : MonoBehaviour
     private Coroutine coroutine;
 
 
-    int[,] arrayName;
-    int[,] arrayPosition;
+    int[,] arrayName = new int[129, 81];
+    int[,] arrayPosition = new int[129, 81];
 
     public GameObject ortographicCam;
     public GameObject perspectiveCam;
@@ -68,8 +68,7 @@ public class HeatmapManager : MonoBehaviour
 
     void Start()
     {
-        arrayName = new int[gridWidth, gridHeight];
-        arrayPosition = new int[gridWidth, gridHeight];
+
 
         StartCoroutine(GetJumpedData());
         StartCoroutine(GetPositionData());
@@ -95,19 +94,19 @@ public class HeatmapManager : MonoBehaviour
         }
     }
 
-    void CreateGrid()
-    {
-        for (int i = 0; i < gridWidth; i++)
-        {
-            for (int j = 0; j < gridHeight; j++)
-            {
-                GameObject gridCubes = Instantiate(heatmapPointPrefab, new Vector3(i - 33, 20, j - 39), Quaternion.identity, transform);
-                allCubes.Add(gridCubes);
-                j += 1;
-            }
-            i += 1;
-        }
-    }
+    // void CreateGrid()
+    // {
+    //     for (int i = 0; i < gridWidth; i++)
+    //     {
+    //         for (int j = 0; j < gridHeight; j++)
+    //         {
+    //             GameObject gridCubes = Instantiate(heatmapPointPrefab, new Vector3(i - 33, 20, j - 39), Quaternion.identity, transform);
+    //             allCubes.Add(gridCubes);
+    //             j += 1;
+    //         }
+    //         i += 1;
+    //     }
+    // }
 
     void GenerateGrid(List<Vector3> list, bool yikers)
     {
@@ -278,30 +277,25 @@ public class HeatmapManager : MonoBehaviour
             EmptyGrid();
             currentList = new List<Vector3>();
         }
-        if (heatType == HeatmapType.Grid)
+
+
+        if (gradient != null)
         {
-            EmptyGrid();
-            CreateGrid();
-        }
-        if (heatType != HeatmapType.Grid)
-        {
-            if (gradient != null)
+            for (int i = 0; i < gradient.colorKeys.Length; i++)
             {
-                for (int i = 0; i < gradient.colorKeys.Length; i++)
+                if (gradient.colorKeys[i].color != _gradient.colorKeys[i].color || gradient.colorKeys[i].time != _gradient.colorKeys[i].time)
                 {
-                    if (gradient.colorKeys[i].color != _gradient.colorKeys[i].color || gradient.colorKeys[i].time != _gradient.colorKeys[i].time)
-                    {
-                        gradientdif = true;
-                        ChangeGradient();
-                    }
+                    gradientdif = true;
+                    ChangeGradient();
                 }
             }
         }
+
         if (heatPosition == HeatmapPosition.Static)
         {
             heatPositionBool = false;
             EmptyGrid();
-            if(heatType != HeatmapType.Path)
+            if (heatType != HeatmapType.Path)
             {
                 GenerateGrid(currentList, heatPositionBool);
             }
@@ -309,13 +303,13 @@ public class HeatmapManager : MonoBehaviour
             {
                 coroutine = StartCoroutine(GeneratePath(PathPositionsList, heatPositionBool));
             }
-            
+
         }
         if (heatPosition == HeatmapPosition.Game)
         {
             heatPositionBool = true;
             EmptyGrid();
-            if(heatType != HeatmapType.Path)
+            if (heatType != HeatmapType.Path)
             {
                 GenerateGrid(currentList, heatPositionBool);
             }
@@ -324,7 +318,7 @@ public class HeatmapManager : MonoBehaviour
                 coroutine = StartCoroutine(GeneratePath(PathPositionsList, heatPositionBool));
             }
         }
-        
+
         if (camType == CameraType.Ortographic)
         {
             CameraOne();
