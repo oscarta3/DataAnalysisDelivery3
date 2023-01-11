@@ -10,7 +10,7 @@ if(true)
      $posZ = $_GET['posZ'];
 	 
 
-     $sql = "INSERT INTO Test (posX,posY,posZ)
+     $sql = "INSERT INTO Paths (posX,posY,posZ)
      VALUES ('$posX' ,'$posY','$posZ')";
      if (mysqli_query($conn, $sql)) {
         echo "New record has been added successfully! ";

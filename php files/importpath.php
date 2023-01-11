@@ -2,7 +2,7 @@
 
 include_once 'settings.php';
 
-$sql = "SELECT posX, posY, posZ, pathN FROM Test";
+$sql = "SELECT posX, posY, posZ, pathN FROM Paths";
 $result = $conn->query($sql);
 
 if ($result->num_rows > 0) {

@@ -572,8 +572,6 @@ namespace Gamekit3D
         // This is usually called by a state machine behaviour on the animator controller but can be called from anywhere.
         public void Respawn()
         {
-            Data("Death");
-            Debug.Log("xdddd");
             StartCoroutine(RespawnRoutine());
         }
 
@@ -679,6 +677,7 @@ namespace Gamekit3D
         // Called by OnReceiveMessage and by DeathVolumes in the scene.
         public void Die(Damageable.DamageMessage damageMessage)
         {
+            Data("Death");
             m_Animator.SetTrigger(m_HashDeath);
             m_ForwardSpeed = 0f;
             m_VerticalSpeed = 0f;
@@ -686,7 +685,7 @@ namespace Gamekit3D
             m_Damageable.isInvulnerable = true;
         }
 
-        void Data(string type)
+        public void Data(string type)
         {
             Vector3Int intPos = new Vector3Int((int)transform.position.x, (int)transform.position.y, (int)transform.position.z);
 
@@ -702,14 +701,16 @@ namespace Gamekit3D
             {
                 onJump(intPos.x, intPos.y, intPos.z);
             }
+            if (type == "EnemyKilled")
+            {
+                
+                onEnemyKilled(intPos.x, intPos.y, intPos.z);
+            }
         }
 
         private void onDamaged(int x, int y, int z)
         {
-            //Debug.Log("Damaged on: " + x + " " + y + " " + z);
             DamagedData newDamagedData = new DamagedData(x, y, z);
-
-            //Debug.Log(newDamagedData.GetUrl());
             StartCoroutine(SendToPHP(newDamagedData));
         }
 
@@ -717,15 +718,11 @@ namespace Gamekit3D
         {
             WWW www = new WWW(newDamagedData.GetUrl());
             yield return www;
-            //Debug.Log(www.text);
         }
 
         private void onJump(int x, int y, int z)
         {
-            //Debug.Log("Jumped on: " + x + " " + y + " " + z);
             JumpData newJumpData = new JumpData(x, y, z);
-
-            //Debug.Log(newJumpData.GetUrl());
             StartCoroutine(SendToPHP(newJumpData));
         }
 
@@ -733,7 +730,18 @@ namespace Gamekit3D
         {
             WWW www = new WWW(newJumpData.GetUrl());
             yield return www;
-            Debug.Log(www.text);
+        }
+
+        private void onEnemyKilled(int x, int y, int z)
+        {
+            EnemyData newEnemyData = new EnemyData(x, y, z);
+            StartCoroutine(SendToPHP(newEnemyData));
+        }
+
+        IEnumerator SendToPHP(EnemyData newEnemyData)
+        {
+            WWW www = new WWW(newEnemyData.GetUrl());
+            yield return www;
         }
 
         private void onDeath(int x, int y, int z)
