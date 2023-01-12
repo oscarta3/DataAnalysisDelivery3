@@ -7,15 +7,18 @@ using System.Threading;
 
 public class HeatmapManager : MonoBehaviour
 {
+
     enum HeatmapType { None, Position, Jumped, Damaged, Death, EnemiesKilled, Path }
-    [SerializeField] HeatmapType heatType;
-
     enum HeatmapPosition { Static, Game }
-    [SerializeField] HeatmapPosition heatPosition;
-
     enum CameraType { Ortographic, Perspective }
-    [SerializeField] CameraType camType;
 
+
+    [Header("Heatmap Settings")]
+    [Space]
+    [SerializeField] HeatmapType heatType;
+    [SerializeField] HeatmapPosition heatPosition;
+    [SerializeField] CameraType camType;
+    public Gradient gradient;
     public bool MapRender = true;
 
     List<Vector3> jumpPositionsList = new List<Vector3>();
@@ -26,8 +29,8 @@ public class HeatmapManager : MonoBehaviour
     List<Vector4> PathPositionsList = new List<Vector4>();
     List<Vector3> currentList = new List<Vector3>();
 
-    public Gradient gradient;
-    public Gradient _gradient = null;
+    
+    
 
     CameraController _controller;
 
@@ -39,23 +42,25 @@ public class HeatmapManager : MonoBehaviour
     float damagedMax = 0;
     float deathMax = 0;
     float killedMax = 0;
+    private Vector3 previousPosition;
 
     bool gradientdif = false;
     bool heatPositionBool = false;
 
     private Coroutine coroutine;
 
-    public List<GameObject> allCubes;
-    public List<float> colorPer;
-    public GameObject heatmapPointPrefab;
+    [HideInInspector] public List<GameObject> allCubes;
+    [HideInInspector] public List<float> colorPer;
+    [HideInInspector] public GameObject heatmapPointPrefab;
 
-    int[,] arrayName = new int[129, 81];
-    int[,] arrayPosition = new int[129, 81];
+    [HideInInspector] int[,] arrayName = new int[129, 81];
+    [HideInInspector] int[,] arrayPosition = new int[129, 81];
 
-    public GameObject map;
-    public GameObject ortographicCam;
-    public GameObject perspectiveCam;
-    public float max = 0;
+    [HideInInspector] public GameObject map;
+    [HideInInspector] public GameObject ortographicCam;
+    [HideInInspector] public GameObject perspectiveCam;
+    [HideInInspector] public float max = 0;
+    [HideInInspector] public Gradient _gradient = null;
 
     public void CameraOne()
     {
@@ -71,15 +76,12 @@ public class HeatmapManager : MonoBehaviour
 
     void Start()
     {
-
-
         StartCoroutine(GetJumpedData());
         StartCoroutine(GetPositionData());
         StartCoroutine(GetDamagedData());
         StartCoroutine(GetDeathData());
         StartCoroutine(GetEnemiesKilledData());
         StartCoroutine(GetPathData());
-
     }
 
     void Update()
@@ -96,7 +98,7 @@ public class HeatmapManager : MonoBehaviour
             }
         }
 
-        if(MapRender)
+        if (MapRender)
         {
             map.gameObject.SetActive(true);
         }
@@ -120,7 +122,7 @@ public class HeatmapManager : MonoBehaviour
     //     }
     // }
 
-    void GenerateGrid(List<Vector3> list, bool yikers)
+    void GenerateGrid(List<Vector3> list, bool grounded_bool)
     {
 
         for (int i = 0; i < gridWidth; i += 2)
@@ -153,7 +155,7 @@ public class HeatmapManager : MonoBehaviour
             {
                 if (arrayName[i, j] != 0)
                 {
-                    if (!yikers)
+                    if (!grounded_bool)
                     {
                         GameObject heatmapPoint = Instantiate(heatmapPointPrefab, new Vector3(i - 33, 20, j - 39), Quaternion.identity, transform);
                         float percentage = (arrayName[i, j] / max);
@@ -196,6 +198,7 @@ public class HeatmapManager : MonoBehaviour
                             {
                                 Vector4 Test = new Vector4(i, list[p].y, j, list[p].w);
                                 list2.Add(Test);
+
                             }
                             else
                             {
